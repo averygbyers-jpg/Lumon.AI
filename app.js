@@ -632,7 +632,7 @@ document.addEventListener("click", () => {
         return;
       }
 
-      const res = await fetch("http://localhost:3000/api/quick-picks", {
+      const res = await fetch("https://lumonai-production.up.railway.app/api/quick-picks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1592,7 +1592,7 @@ document.addEventListener("click", () => {
       console.log("🔄 Generating creative title from conversation...");
       
       // Generate title using AI based on the actual conversation
-      const titleResponse = await fetch("http://localhost:3000/api/chat", {
+      const titleResponse = await fetch("https://lumonai-production.up.railway.app/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3096,7 +3096,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
 
     try {
       // CHANGE THIS LINE - use full URL
-      const res = await fetch("http://localhost:3000/api/chat", {
+      const res = await fetch("https://lumonai-production.up.railway.app/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -3138,7 +3138,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
     if (!messages || messages.length < 4) return;
     try {
       const existingMemoryFacts = memories.map(m => typeof m === "string" ? m : m.fact);
-      const response = await fetch("http://localhost:3000/api/extract-memories", {
+      const response = await fetch("https://lumonai-production.up.railway.app/api/extract-memories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages, existingMemories: existingMemoryFacts }),
@@ -3235,7 +3235,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
       console.log("✅ Lumon is asking for user input. Generating quick pick options via API...");
       
       try {
-        const apiRes = await fetch("http://localhost:3000/api/quick-picks", {
+        const apiRes = await fetch("https://lumonai-production.up.railway.app/api/quick-picks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3777,7 +3777,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
       let lastUpdateDepth = parseInt(localStorage.getItem("lumonCoachLastDepth") || "0");
       
       try {
-        const apiRes = await fetch("http://localhost:3000/api/prompt-coach", {
+        const apiRes = await fetch("https://lumonai-production.up.railway.app/api/prompt-coach", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3885,7 +3885,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
             
             // Transform question to statement using AI
             try {
-              const transformRes = await fetch("http://localhost:3000/api/transform-question", {
+              const transformRes = await fetch("https://lumonai-production.up.railway.app/api/transform-question", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question, userMessage: currentText }),
