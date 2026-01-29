@@ -97,9 +97,10 @@
     try {
       const result = await window.firebaseSignInWithPopup(auth, window.firebaseGoogleProvider);
       console.log("Signed in as:", result.user.email);
+      showCustomNotification("Signed in successfully!", "success");
     } catch (error) {
       console.error("Sign in error:", error);
-      alert("Failed to sign in: " + error.message);
+      showCustomNotification("Sign in failed: " + error.message, "error");
     }
   };
 
@@ -112,9 +113,10 @@
     try {
       const result = await window.firebaseSignInWithEmailAndPassword(auth, email, password);
       console.log("Signed in as:", result.user.email);
+      showCustomNotification("Signed in successfully!", "success");
     } catch (error) {
       console.error("Sign in error:", error);
-      alert("Failed to sign in: " + error.message);
+      showCustomNotification("Sign in failed: " + error.message, "error");
     }
   };
 
@@ -127,9 +129,10 @@
     try {
       const result = await window.firebaseCreateUserWithEmailAndPassword(auth, email, password);
       console.log("Account created:", result.user.email);
+      showCustomNotification("Account created successfully!", "success");
     } catch (error) {
       console.error("Sign up error:", error);
-      alert("Failed to create account: " + error.message);
+      showCustomNotification("Sign up failed: " + error.message, "error");
     }
   };
 
@@ -137,11 +140,36 @@
     try {
       await window.firebaseSignOut(auth);
       console.log("Logged out");
+      showCustomNotification("Logged out successfully", "success");
     } catch (error) {
       console.error("Logout error:", error);
-      alert("Failed to log out: " + error.message);
+      showCustomNotification("Logout failed: " + error.message, "error");
     }
   };
+
+  // Custom notification system
+  function showCustomNotification(message, type = "info") {
+    // Remove existing notification if present
+    const existing = document.getElementById("lumon-notification");
+    if (existing) existing.remove();
+
+    const notification = document.createElement("div");
+    notification.id = "lumon-notification";
+    notification.className = `lumon-notification lumon-notification-${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        <span>${message}</span>
+        <button class="notification-close" onclick="document.getElementById('lumon-notification').remove()">✕</button>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) notification.remove();
+    }, 5000);
+  }
 
   async function loadUserConversations() {
     // TODO: Load conversations from Firestore
