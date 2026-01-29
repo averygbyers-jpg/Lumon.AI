@@ -5,6 +5,48 @@
   <title>Lumon</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAy8X-p7627FgCyB0M3C3qczGnZ0soiaYI",
+      authDomain: "lumon-ai.firebaseapp.com",
+      projectId: "lumon-ai",
+      storageBucket: "lumon-ai.firebasestorage.app",
+      messagingSenderId: "203303709313",
+      appId: "1:203303709313:web:5e2554df5eb48c1cccbb80",
+      measurementId: "G-BV5R8RWY7Y"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Expose to global scope so app.js can access
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.firebaseGoogleProvider = new GoogleAuthProvider();
+    window.firebaseCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.firebaseSignInWithPopup = signInWithPopup;
+    window.firebaseSignOut = signOut;
+    window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    window.firebaseCollection = collection;
+    window.firebaseAddDoc = addDoc;
+    window.firebaseQuery = query;
+    window.firebaseWhere = where;
+    window.firebaseOrderBy = orderBy;
+    window.firebaseOnSnapshot = onSnapshot;
+    window.firebaseGetDocs = getDocs;
+    window.firebaseUpdateDoc = updateDoc;
+    window.firebaseDoc = doc;
+    window.firebaseDeleteDoc = deleteDoc;
+  </script>
 </head>
 <body>
   <!-- Left rail + handle -->
@@ -349,13 +391,23 @@
       </div>
 
       <div class="profile-panel-section">
-        <div class="profile-panel-label">Connections</div>
-        <button class="profile-option profile-option-disabled" type="button">
-          Connect Google <span class="profile-option-tag">Soon</span>
-        </button>
-        <button class="profile-option profile-option-disabled" type="button">
-          Connect X <span class="profile-option-tag">Soon</span>
-        </button>
+        <div class="profile-panel-label">Account</div>
+        <div id="auth-buttons" style="display: none; gap: 8px; flex-direction: column;">
+          <button class="profile-option" type="button" onclick="window.signInWithGoogle()">
+            Sign in with Google
+          </button>
+          <button class="profile-option" type="button" onclick="window.signInWithEmail()">
+            Sign in with Email
+          </button>
+          <button class="profile-option" type="button" onclick="window.signUpWithEmail()">
+            Create Account
+          </button>
+        </div>
+        <div id="user-buttons" style="display: none; gap: 8px; flex-direction: column;">
+          <button class="profile-option" type="button" onclick="window.logOut()" style="background-color: #d4c3b4;">
+            Log Out
+          </button>
+        </div>
       </div>
 
       <div class="profile-panel-footer">
@@ -501,7 +553,73 @@
     <!-- Onboarding screen -->
     <section id="onboarding-screen" class="onboarding-screen">
       <!-- Step 1: Welcome/What is Lumon -->
-      <div id="onboard-step-1" class="onboarding-card onboarding-step active">
+      <!-- Step 0: Login -->
+      <div id="onboard-step-0" class="onboarding-card onboarding-step active">
+        <div class="onboarding-splash">
+          <h1 class="splash-title">Lumon</h1>
+          <p class="splash-subtitle">Your Personal AI Thinking Partner</p>
+          
+          <p style="text-align: center; margin: 20px 0; color: #666;">Sign in or create an account to get started</p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin: 30px 0;">
+            <button class="primary-button" type="button" onclick="window.signInWithGoogle()" style="width: 100%;">
+              Sign in with Google
+            </button>
+            <button class="secondary-button" type="button" onclick="window.signInWithEmail()" style="width: 100%;">
+              Sign in with Email
+            </button>
+            <button class="secondary-button" type="button" onclick="window.signUpWithEmail()" style="width: 100%;">
+              Create Account with Email
+            </button>
+          </div>
+
+          <button id="learn-more-toggle" class="learn-more-toggle" type="button">
+            Learn More About Lumon
+          </button>
+
+          <div id="learn-more-content" class="learn-more-content hidden">
+            <div class="about-lumon-detail">
+              <p><strong>Lumon</strong> is a focused AI workspace designed to help you think more clearly, prompt more effectively, and make real progress on what you're working on.</p>
+              
+              <p>Unlike general-purpose chatbots, Lumon is built around <strong>intent and learning</strong>. It adapts to who you are, remembers everything you tell it—even across different sessions—and teaches you how to interact with AI more effectively while giving you fast, focused help.</p>
+              
+              <h4>What makes Lumon different</h4>
+              <ul>
+                <li><strong>Remembers everything:</strong> Your entire conversation history and preferences persist across all sessions. Lumon knows your context, your goals, and how you like to work—always.</li>
+                <li><strong>Teaches you to prompt better:</strong> Built-in feedback helps you refine your questions and get better results. Learning how to use AI effectively is part of the experience.</li>
+                <li><strong>Speed meets substance:</strong> Quick, direct answers without sacrificing clarity. Convenience and helpfulness work together.</li>
+              </ul>
+
+              <h4>What Lumon helps you with</h4>
+              <ul>
+                <li>Turning vague ideas into clear, actionable plans</li>
+                <li>Learning to ask better questions and refining your thinking</li>
+                <li>Working through complex problems without being overwhelmed</li>
+                <li>Getting structured help matched to your experience level</li>
+              </ul>
+
+              <h4>How Lumon works</h4>
+              <ul>
+                <li>Remembers your goals, context, and preferences across all sessions</li>
+                <li>Teaches you how to prompt more effectively as you go</li>
+                <li>Provides quick, honest, and structured responses</li>
+                <li>Encourages progress through intentional interaction</li>
+              </ul>
+
+              <h4>What Lumon is not</h4>
+              <ul>
+                <li>A replacement for your judgment or creativity</li>
+                <li>A black-box authority that pretends certainty when it doesn't have it</li>
+                <li>A generic chatbot optimized for endless conversation</li>
+              </ul>
+
+              <p>Lumon is meant to feel less like "talking to an AI" and more like working alongside a calm, thoughtful assistant—one that helps you move forward with confidence, intention, and the skills to use AI effectively.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="onboard-step-1" class="onboarding-card onboarding-step hidden">
         <div class="onboarding-splash">
           <h1 class="splash-title">Lumon</h1>
           <p class="splash-subtitle">Your Personal AI Thinking Partner</p>

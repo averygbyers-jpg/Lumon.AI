@@ -1,5 +1,183 @@
 // app.js
 (function () {
+  // Wait for Firebase to be ready
+  let auth, db, firebaseReady = false;
+  
+  // Check if Firebase is initialized
+  function waitForFirebase() {
+    return new Promise((resolve) => {
+      if (window.firebaseAuth && window.firebaseDb) {
+        auth = window.firebaseAuth;
+        db = window.firebaseDb;
+        firebaseReady = true;
+        resolve();
+      } else {
+        // Retry if not ready yet
+        setTimeout(waitForFirebase, 100).then(resolve);
+      }
+    });
+  }
+
+  // Initialize Firebase when page loads
+  waitForFirebase().then(() => {
+    setupAuthStateListener();
+  });
+
+  let currentUser = null;
+
+  function setupAuthStateListener() {
+    window.firebaseOnAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      updateAuthUI();
+      if (user) {
+        // User is logged in
+        loadUserConversations();
+      } else {
+        // User is logged out
+        clearChat();
+      }
+    });
+  }
+
+  function updateAuthUI() {
+    const profileBtn = document.getElementById("profile-btn");
+    const profileChipName = document.getElementById("profile-chip-name");
+    const screenChat = document.getElementById("screen-chat");
+    const authButtons = document.getElementById("auth-buttons");
+    const userButtons = document.getElementById("user-buttons");
+    const onboardStep0 = document.getElementById("onboard-step-0");
+    const onboardStep1 = document.getElementById("onboard-step-1");
+    
+    if (!currentUser) {
+      // Show login screen (step 0)
+      if (onboardStep0) {
+        showOnboardStep(0);
+      }
+      // Hide chat
+      if (screenChat) screenChat.classList.add("hidden");
+      // Show auth buttons in profile panel
+      if (authButtons) {
+        authButtons.style.display = "flex";
+      }
+      if (userButtons) {
+        userButtons.style.display = "none";
+      }
+      if (profileChipName) profileChipName.textContent = "Sign in";
+    } else {
+      // User is logged in - move to step 1
+      if (onboardStep0) {
+        onboardStep0.classList.add("hidden");
+      }
+      if (onboardStep1) {
+        onboardStep1.classList.remove("hidden");
+        showOnboardStep(1);
+      }
+      // Show chat
+      if (screenChat) screenChat.classList.remove("hidden");
+      if (profileChipName) profileChipName.textContent = currentUser.displayName || currentUser.email;
+      // Hide auth buttons, show logout button
+      if (authButtons) {
+        authButtons.style.display = "none";
+      }
+      if (userButtons) {
+        userButtons.style.display = "flex";
+      }
+    }
+  }
+
+  function clearChat() {
+    const chatLog = document.getElementById("chat-log") || document.getElementById("chat-messages");
+    if (chatLog) chatLog.innerHTML = "";
+    const userInput = document.getElementById("user-input");
+    if (userInput) userInput.value = "";
+  }
+
+  // Expose functions globally for HTML onclick handlers
+  window.signInWithGoogle = async () => {
+    try {
+      const result = await window.firebaseSignInWithPopup(auth, window.firebaseGoogleProvider);
+      console.log("Signed in as:", result.user.email);
+    } catch (error) {
+      console.error("Sign in error:", error);
+      alert("Failed to sign in: " + error.message);
+    }
+  };
+
+  window.signInWithEmail = async () => {
+    const email = prompt("Enter your email:");
+    if (!email) return;
+    const password = prompt("Enter your password:");
+    if (!password) return;
+    
+    try {
+      const result = await window.firebaseSignInWithEmailAndPassword(auth, email, password);
+      console.log("Signed in as:", result.user.email);
+    } catch (error) {
+      console.error("Sign in error:", error);
+      alert("Failed to sign in: " + error.message);
+    }
+  };
+
+  window.signUpWithEmail = async () => {
+    const email = prompt("Enter your email:");
+    if (!email) return;
+    const password = prompt("Enter your password (minimum 6 characters):");
+    if (!password) return;
+    
+    try {
+      const result = await window.firebaseCreateUserWithEmailAndPassword(auth, email, password);
+      console.log("Account created:", result.user.email);
+    } catch (error) {
+      console.error("Sign up error:", error);
+      alert("Failed to create account: " + error.message);
+    }
+  };
+
+  window.logOut = async () => {
+    try {
+      await window.firebaseSignOut(auth);
+      console.log("Logged out");
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Failed to log out: " + error.message);
+    }
+  };
+
+  async function loadUserConversations() {
+    // TODO: Load conversations from Firestore
+  }
+
+  // Function to save a message to Firestore
+  async function saveMessageToFirestore(conversationId, message) {
+    if (!currentUser || !firebaseReady) return;
+    
+    try {
+      await window.firebaseAddDoc(window.firebaseCollection(db, `users/${currentUser.uid}/conversations/${conversationId}/messages`), {
+        text: message.text,
+        role: message.role,
+        timestamp: new Date(),
+        isFormatted: message.isFormatted || false
+      });
+    } catch (error) {
+      console.error("Error saving message:", error);
+    }
+  }
+
+  // Store current conversation ID
+  let currentConversationId = null;
+
+  function getOrCreateConversationId() {
+    if (!currentConversationId) {
+      currentConversationId = Date.now().toString();
+    }
+    return currentConversationId;
+  }
+
+  // For "new chat" button, reset conversation ID
+  function startNewConversation() {
+    currentConversationId = null;
+  }
+
   // -----------------------------
   // Element references
   // -----------------------------
@@ -21,6 +199,7 @@
   const problemInput = document.getElementById("problem-input");
 
   // Multi-step onboarding flow
+  const onboardStep0 = document.getElementById("onboard-step-0");
   const onboardStep1 = document.getElementById("onboard-step-1");
   const onboardStep2 = document.getElementById("onboard-step-2");
   const onboardStep3 = document.getElementById("onboard-step-3");
@@ -30,9 +209,10 @@
   const onboardBack3 = document.getElementById("onboard-back-3");
 
   function showOnboardStep(step) {
-    [onboardStep1, onboardStep2, onboardStep3].forEach(s => {
+    [onboardStep0, onboardStep1, onboardStep2, onboardStep3].forEach(s => {
       if (s) s.classList.add("hidden");
     });
+    if (step === 0 && onboardStep0) onboardStep0.classList.remove("hidden");
     if (step === 1 && onboardStep1) onboardStep1.classList.remove("hidden");
     if (step === 2 && onboardStep2) onboardStep2.classList.remove("hidden");
     if (step === 3 && onboardStep3) onboardStep3.classList.remove("hidden");
@@ -1501,6 +1681,9 @@ document.addEventListener("click", () => {
 
     clearChatLog();
     messageHistory = [];
+    
+    // Reset Firestore conversation ID for new chat
+    startNewConversation();
 
     if (withSessionSetup) {
       if (sessionSetup) sessionSetup.classList.remove("hidden");
@@ -2748,6 +2931,16 @@ document.addEventListener("click", () => {
     bubble.appendChild(meta);
     bubble.appendChild(body);
     msg.appendChild(bubble);
+    
+    // Save message to Firestore if user is logged in
+    if (store && currentUser && firebaseReady) {
+      const conversationId = getOrCreateConversationId();
+      saveMessageToFirestore(conversationId, {
+        text: content,
+        role: role,
+        isFormatted: role === "ai"
+      });
+    }
     
     // Add action buttons for AI responses
     if (role === "ai") {
