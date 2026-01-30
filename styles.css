@@ -1751,13 +1751,36 @@ body.lumon-dark .thinking-dots .dot {
   gap: 10px;
 }
 
+#connect-files-btn {
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+#connect-files-btn svg {
+  width: 18px;
+  height: 18px;
+  color: #a16b3f;
+  stroke: currentColor;
+  transition: all 0.2s ease;
+}
+
 .mode-menu-item:hover {
   background: rgba(161, 106, 63, 0.15);
   color: #fdfaf6;
 }
 
+#connect-files-btn:hover svg {
+  color: #c99b72;
+  stroke-width: 2.5;
+  transform: scale(1.15);
+}
+
 .mode-menu-item:active {
   background: rgba(161, 106, 63, 0.25);
+}
+
+#connect-files-btn:active svg {
+  transform: scale(0.95);
 }
 
 #send-button {
