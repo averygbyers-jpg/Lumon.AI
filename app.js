@@ -254,7 +254,147 @@
   }
 
   async function loadUserConversations() {
-    // TODO: Load conversations from Firestore
+    if (!currentUser || !firebaseReady) return;
+    
+    const conversationList = document.getElementById("conversation-list");
+    if (!conversationList) return;
+    
+    try {
+      // Query all conversations for the current user, ordered by most recent
+      const conversationsRef = window.firebaseCollection(db, `users/${currentUser.uid}/conversations`);
+      const q = window.firebaseQuery(conversationsRef, window.firebaseOrderBy("updatedAt", "desc"));
+      
+      // Real-time listener for conversations
+      window.firebaseOnSnapshot(q, async (querySnapshot) => {
+        conversationList.innerHTML = "";
+        
+        if (querySnapshot.empty) {
+          conversationList.innerHTML = `<div class="conversation-item empty">No conversations yet. Start a new chat!</div>`;
+          return;
+        }
+        
+        // Load each conversation
+        for (const docSnapshot of querySnapshot.docs) {
+          const conversationId = docSnapshot.id;
+          const conversationData = docSnapshot.data();
+          
+          // Get message count
+          const messagesRef = window.firebaseCollection(db, `users/${currentUser.uid}/conversations/${conversationId}/messages`);
+          const messagesSnapshot = await window.firebaseGetDocs(messagesRef);
+          const messageCount = messagesSnapshot.size;
+          
+          // Create conversation item
+          const conversationItem = document.createElement("div");
+          conversationItem.className = "conversation-item";
+          conversationItem.dataset.conversationId = conversationId;
+          
+          // Extract title from first user message or use default
+          let title = conversationData.title || "Untitled Conversation";
+          if (title.length > 40) {
+            title = title.substring(0, 37) + "...";
+          }
+          
+          // Format date
+          const date = conversationData.updatedAt?.toDate?.() || new Date();
+          const formattedDate = formatConversationDate(date);
+          
+          conversationItem.innerHTML = `
+            <div class="conversation-item-content">
+              <div class="conversation-title">${escapeHtml(title)}</div>
+              <div class="conversation-meta">${messageCount} messages • ${formattedDate}</div>
+            </div>
+          `;
+          
+          // Add click handler to load conversation
+          conversationItem.addEventListener("click", () => {
+            loadConversation(conversationId);
+          });
+          
+          conversationList.appendChild(conversationItem);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      conversationList.innerHTML = `<div class="conversation-item error">Error loading conversations</div>`;
+    }
+  }
+
+  // Helper function to format date for conversation list
+  function formatConversationDate(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  }
+
+  // Load a specific conversation
+  async function loadConversation(conversationId) {
+    if (!currentUser || !firebaseReady) return;
+    
+    try {
+      // Set the current conversation ID
+      currentConversationId = conversationId;
+      
+      // Update active conversation visual
+      document.querySelectorAll(".conversation-item").forEach(item => {
+        item.classList.remove("active");
+      });
+      document.querySelector(`[data-conversation-id="${conversationId}"]`)?.classList.add("active");
+      
+      // Clear chat
+      const chatLog = document.getElementById("chat-log") || document.getElementById("chat-messages");
+      if (chatLog) chatLog.innerHTML = "";
+      
+      // Load messages from Firestore
+      const messagesRef = window.firebaseCollection(db, `users/${currentUser.uid}/conversations/${conversationId}/messages`);
+      const q = window.firebaseQuery(messagesRef, window.firebaseOrderBy("timestamp", "asc"));
+      
+      const messagesSnapshot = await window.firebaseGetDocs(q);
+      
+      // Add messages to chat
+      messagesSnapshot.forEach(docSnapshot => {
+        const messageData = docSnapshot.data();
+        const messageBody = messageData.text || "";
+        
+        if (messageData.role === "user") {
+          addMessage("user", messageBody, false);
+        } else if (messageData.role === "assistant") {
+          addMessage("ai", messageBody, false, { formatted: messageData.isFormatted });
+        }
+      });
+      
+      // Update conversation in memory if needed for messageHistory
+      messageHistory = [];
+      messagesSnapshot.forEach(docSnapshot => {
+        const messageData = docSnapshot.data();
+        messageHistory.push({
+          role: messageData.role === "assistant" ? "assistant" : "user",
+          content: messageData.text || ""
+        });
+      });
+      
+      // Ensure chat screen is visible
+      if (screenChat) {
+        screenChat.classList.remove("hidden");
+      }
+      setActiveScreen(screenChat);
+      
+      // Focus input
+      if (userInput) {
+        userInput.focus();
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+      showCustomNotification("Error loading conversation", "error");
+    }
   }
 
   // Function to save a message to Firestore
@@ -262,12 +402,27 @@
     if (!currentUser || !firebaseReady) return;
     
     try {
+      // Add message to messages collection (this auto-creates parent docs)
       await window.firebaseAddDoc(window.firebaseCollection(db, `users/${currentUser.uid}/conversations/${conversationId}/messages`), {
         text: message.text,
         role: message.role,
         timestamp: new Date(),
         isFormatted: message.isFormatted || false
       });
+      
+      // Update the conversation's metadata
+      // After message is added, update conversation metadata
+      const conversationRef = window.firebaseDoc(db, `users/${currentUser.uid}/conversations/${conversationId}`);
+      try {
+        await window.firebaseUpdateDoc(conversationRef, {
+          updatedAt: new Date(),
+          title: message.title || "Conversation"
+        });
+      } catch (updateError) {
+        // If document doesn't exist, it will be created by the subcollection write
+        // Just log and continue
+        console.warn("Could not update conversation metadata:", updateError);
+      }
     } catch (error) {
       console.error("Error saving message:", error);
     }
