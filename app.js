@@ -4215,6 +4215,7 @@ This approach makes you more helpful and trustworthy because solutions are custo
   const promptCoachPanel = document.getElementById("prompt-coach-panel");
   const promptCoachClose = document.getElementById("prompt-coach-close");
   const promptCoachBody = document.getElementById("prompt-coach-body");
+  const promptCoachInner = document.querySelector(".prompt-coach-inner");
 
   // NEW: Function to populate Prompt Coach with suggestions
   async function populatePromptCoach(userMessage = null) {
@@ -4225,6 +4226,10 @@ This approach makes you more helpful and trustworthy because solutions are custo
     
     try {
       console.log("📡 Generating Prompt Coach suggestions...");
+      // Add updating animation
+      if (promptCoachInner) {
+        promptCoachInner.classList.add("updating");
+      }
       promptCoachBody.innerHTML = `<div class="prompt-coach-muted">Loading suggestions...</div>`;
       
       const currentText = userMessage || (userInput?.value || "").trim() || "";
@@ -4265,6 +4270,9 @@ This approach makes you more helpful and trustworthy because solutions are custo
         const shouldAutoOpen = data.shouldAutoOpen;
         
         if (statements.length === 0 && questions.length === 0) {
+          if (promptCoachInner) {
+            promptCoachInner.classList.remove("updating");
+          }
           promptCoachBody.innerHTML = `<div class="prompt-coach-muted">Keep sharing! The more details you provide, the better I can help.</div>`;
           return;
         }
@@ -4317,6 +4325,11 @@ This approach makes you more helpful and trustworthy because solutions are custo
         
         html += `</div>`;
         promptCoachBody.innerHTML = html;
+        
+        // Remove updating animation when done
+        if (promptCoachInner) {
+          promptCoachInner.classList.remove("updating");
+        }
 
         // Wire statement clicks - insert as-is
         promptCoachBody.querySelectorAll(".coach-statement").forEach((btn) => {
@@ -4373,11 +4386,17 @@ This approach makes you more helpful and trustworthy because solutions are custo
 
       } catch (apiErr) {
         console.error("❌ Prompt coach API error:", apiErr);
+        if (promptCoachInner) {
+          promptCoachInner.classList.remove("updating");
+        }
         promptCoachBody.innerHTML = `<div class="prompt-coach-muted">Ready to help! Share what's on your mind.</div>`;
       }
 
     } catch (err) {
       console.error("❌ Coach error:", err);
+      if (promptCoachInner) {
+        promptCoachInner.classList.remove("updating");
+      }
       promptCoachBody.innerHTML = `<div class="prompt-coach-muted">Ready to help! Share what's on your mind.</div>`;
     }
   }

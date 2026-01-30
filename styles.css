@@ -1873,6 +1873,42 @@ body.lumon-dark .thinking-dots .dot {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.prompt-coach-inner.updating {
+  animation: promptCoachBorderGlow 2.5s linear infinite;
+  border-image: linear-gradient(
+    90deg,
+    #8B6914 0%,
+    #a16b3f 25%,
+    #8B6914 50%,
+    #a16b3f 75%,
+    #8B6914 100%
+  ) 1;
+}
+
+@keyframes promptCoachBorderGlow {
+  0% {
+    border-image: linear-gradient(
+      90deg,
+      #8B6914 0%,
+      #a16b3f 25%,
+      #8B6914 50%,
+      #a16b3f 75%,
+      #8B6914 100%
+    ) 1;
+  }
+  100% {
+    border-image: linear-gradient(
+      450deg,
+      #8B6914 0%,
+      #a16b3f 25%,
+      #8B6914 50%,
+      #a16b3f 75%,
+      #8B6914 100%
+    ) 1;
+  }
 }
 
 .prompt-coach-header {
