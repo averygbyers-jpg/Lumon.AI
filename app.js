@@ -105,14 +105,15 @@
   };
 
   window.signInWithEmail = async () => {
-    const email = prompt("Enter your email:");
-    if (!email) return;
-    const password = prompt("Enter your password:");
-    if (!password) return;
+    const result = await showCustomModal("Sign In with Email", [
+      { id: "email", label: "Email", type: "email", placeholder: "your@email.com" },
+      { id: "password", label: "Password", type: "password", placeholder: "Enter your password" }
+    ]);
+    
+    if (!result) return;
     
     try {
-      const result = await window.firebaseSignInWithEmailAndPassword(auth, email, password);
-      console.log("Signed in as:", result.user.email);
+      await window.firebaseSignInWithEmailAndPassword(auth, result.email, result.password);
       showCustomNotification("Signed in successfully!", "success");
     } catch (error) {
       console.error("Sign in error:", error);
@@ -121,14 +122,15 @@
   };
 
   window.signUpWithEmail = async () => {
-    const email = prompt("Enter your email:");
-    if (!email) return;
-    const password = prompt("Enter your password (minimum 6 characters):");
-    if (!password) return;
+    const result = await showCustomModal("Create Account", [
+      { id: "email", label: "Email", type: "email", placeholder: "your@email.com" },
+      { id: "password", label: "Password", type: "password", placeholder: "Minimum 6 characters" }
+    ]);
+    
+    if (!result) return;
     
     try {
-      const result = await window.firebaseCreateUserWithEmailAndPassword(auth, email, password);
-      console.log("Account created:", result.user.email);
+      await window.firebaseCreateUserWithEmailAndPassword(auth, result.email, result.password);
       showCustomNotification("Account created successfully!", "success");
     } catch (error) {
       console.error("Sign up error:", error);
@@ -169,6 +171,86 @@
     setTimeout(() => {
       if (notification.parentNode) notification.remove();
     }, 5000);
+  }
+
+  // Custom modal for form inputs
+  function showCustomModal(title, fields) {
+    return new Promise((resolve) => {
+      // Create modal
+      const modal = document.createElement("div");
+      modal.id = "lumon-custom-modal";
+      modal.className = "lumon-modal-backdrop";
+      
+      const formInputs = fields.map(field => `
+        <div class="modal-field">
+          <label class="modal-label">${field.label}</label>
+          <input 
+            type="${field.type}" 
+            class="modal-input" 
+            id="modal-${field.id}"
+            placeholder="${field.placeholder}"
+          />
+        </div>
+      `).join("");
+
+      modal.innerHTML = `
+        <div class="lumon-modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">${title}</h2>
+            <button class="modal-close" onclick="document.getElementById('lumon-custom-modal').remove()">✕</button>
+          </div>
+          <div class="modal-body">
+            ${formInputs}
+          </div>
+          <div class="modal-footer">
+            <button class="modal-button modal-button-cancel" onclick="document.getElementById('lumon-custom-modal').remove()">Cancel</button>
+            <button class="modal-button modal-button-submit" onclick="document.getElementById('lumon-custom-modal').dataset.submit = 'true'">Submit</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Handle submit
+      const submitBtn = modal.querySelector(".modal-button-submit");
+      submitBtn.addEventListener("click", () => {
+        const result = {};
+        let valid = true;
+        fields.forEach(field => {
+          const input = document.getElementById(`modal-${field.id}`);
+          if (!input.value.trim()) {
+            valid = false;
+            input.style.borderColor = "#c89c74";
+          }
+          result[field.id] = input.value;
+        });
+
+        if (valid) {
+          modal.remove();
+          resolve(result);
+        }
+      });
+
+      // Handle cancel
+      const cancelBtn = modal.querySelector(".modal-button-cancel");
+      cancelBtn.addEventListener("click", () => {
+        modal.remove();
+        resolve(null);
+      });
+
+      // Handle Enter key
+      modal.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          submitBtn.click();
+        }
+      });
+
+      // Focus first input
+      setTimeout(() => {
+        const firstInput = modal.querySelector(".modal-input");
+        if (firstInput) firstInput.focus();
+      }, 100);
+    });
   }
 
   async function loadUserConversations() {
